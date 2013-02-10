@@ -1,4 +1,4 @@
-Basic intro to this project can be found on my blog: http://www.adathedev.co.uk/2013/02/intro-to-elastictweets-project.html
+Basic intro to this project can be found on my blog: http://www.adathedev.co.uk/2013/02/import-twitter-archive-elasticsearch.html
 
 ElasticTweets - very basic WinForms GUI (and I mean basic, no basic input validation etc) allowing you to import the tweet data into ElasticSearch
 ElasticTweets.Library - all the engine room nuts and bolts 
