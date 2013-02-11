@@ -7,6 +7,7 @@ using ElasticTweets.Library.Providers;
 using Moq;
 using NUnit.Framework;
 using Nest;
+using Newtonsoft.Json;
 
 // ReSharper disable InconsistentNaming
 namespace ElasticTweets.Library.UnitTests
@@ -42,7 +43,9 @@ namespace ElasticTweets.Library.UnitTests
             _mockedFileSystem.Setup(fs => fs.DirectoryExists(TestSourceDirectory)).Returns(true);
             _mockedClientProvider.Setup(cp => cp.GetClient(_mockedConnectionSettings.Object))
                                  .Returns(_mockedClient.Object);
+
             _mockedFileParser.Setup(fp => fp.GetTweets(It.IsAny<string>())).Returns(_testTweets);
+
             _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(_mockedClientResponse.Object);
 
             _importer = new Importer(_mockedFileSystem.Object, _mockedFileParser.Object, _mockedClientProvider.Object, _mockedConnectionSettings.Object, TestSourceDirectory);
@@ -213,20 +216,40 @@ namespace ElasticTweets.Library.UnitTests
         }
 
         [Test]
-        public void Import_ReturnsCorrectImportResult()
+        public void Import_ReturnsCorrectImportResultForValidFile()
         {
             InitialiseImporter();
-            _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] { "1.js" });
-            _mockedFileSystem.Setup(fs => fs.ReadAllText(It.IsAny<string>())).Returns("");
+            SetupFileSystem();
             _testTweets.Add(new { id = 1 });
 
             var result = _importer.Import();
 
-            Assert.AreEqual(1, result.ImportedFiles.Count(), "1 ImportedFile expected");
-            var file = result.ImportedFiles.First();
+            Assert.AreEqual(1, result.Files.Count(), "1 ImportFileResult expected");
+            var file = result.Files.First();
             Assert.AreEqual(1, file.NumberOfTweets, "Incorrect NumberOfTweets");
             Assert.AreEqual("1.js", file.FileName, "Incorrect FileName");
+            Assert.IsTrue(file.Success, "Success should be True");
+        }
 
+        private void SetupFileSystem()
+        {
+            _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] {"1.js"});
+            _mockedFileSystem.Setup(fs => fs.ReadAllText(It.IsAny<string>())).Returns("");
+        }
+
+        [Test]
+        public void Import_ReturnsFailureResultForFileWithInvalidJson()
+        {
+            InitialiseImporter();
+            SetupFileSystem();
+            _mockedFileParser.Setup(p => p.GetTweets(It.IsAny<string>())).Throws(new JsonReaderException("Dummy Error"));
+
+            var result = _importer.Import();
+
+            Assert.AreEqual(1, result.Files.Count(), "1 ImportFileResult expected");
+            var file = result.Files.First();
+            Assert.IsFalse(file.Success, "Success should be false");
+            Assert.That(file.ErrorMessage.StartsWith("File contains invalid JSON"), "Unexpected error message");
         }
         #endregion
     }

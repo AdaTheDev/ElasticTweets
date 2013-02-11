@@ -51,7 +51,7 @@
   <ItemGroup>
     <Compile Include="ElasticConnectionSettings.cs" />
     <Compile Include="IElasticConnectionSettings.cs" />
-    <Compile Include="ImportedFile.cs" />
+    <Compile Include="ImportFileResult.cs" />
     <Compile Include="Importer.cs" />
     <Compile Include="ImportResult.cs" />
     <Compile Include="IO\FileSystem.cs" />

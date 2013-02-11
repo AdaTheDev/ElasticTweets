@@ -5,6 +5,7 @@ using System.Linq;
 using ElasticTweets.Library.IO;
 using ElasticTweets.Library.Providers;
 using Nest;
+using Newtonsoft.Json;
 
 namespace ElasticTweets.Library
 {
@@ -54,8 +55,9 @@ namespace ElasticTweets.Library
 
         /// <summary>
         /// Iterates round each .js file in the source directory,
-        /// deserializes the tweet data in each one and pushes into
-        /// ElasticSearch
+        /// deserializes the tweet data in each one and pushes into ElasticSearch.
+        /// Each file = 1 month's worth of tweets. Currently, entire file is read in
+        /// one go and all tweets pushed to ES in a batch.
         /// </summary>
         /// <returns>ImportResult</returns>
         public ImportResult Import()
@@ -71,16 +73,28 @@ namespace ElasticTweets.Library
             return results;
         }
 
-        private ImportedFile ProcessFile(string file, IElasticClient client)
+        private ImportFileResult ProcessFile(string file, IElasticClient client)
         {
-            IEnumerable<dynamic> tweets = _parser.GetTweets(file).ToArray();
+            ImportFileResult result;
 
-            if (tweets.Any())
+            try
             {
-                client.IndexMany(tweets);                
+                IEnumerable<dynamic> tweets = _parser.GetTweets(file).ToArray();
+
+                if (tweets.Any())
+                {
+                    client.IndexMany(tweets);
+                }
+
+                result = new ImportFileResult(file, tweets.Count());
+            }
+            catch (JsonReaderException jsonReaderException)
+            {
+                // Dodgy file/invalid json
+                result = new ImportFileResult(file, "File contains invalid JSON. Exception: " + jsonReaderException.Message);
             }
 
-            return new ImportedFile(file, tweets.Count());
+            return result;
         }
     }
 }

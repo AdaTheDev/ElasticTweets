@@ -58,7 +58,7 @@
   <ItemGroup>
     <Compile Include="Common\TestCases.cs" />
     <Compile Include="ElasticConnectionSettingsFixture.cs" />
-    <Compile Include="ImportedFileFixture.cs" />
+    <Compile Include="ImportFileResultFixture.cs" />
     <Compile Include="ImporterFixture.cs" />
     <Compile Include="ImportResultFixture.cs" />
     <Compile Include="IO\TweetFileParserFixture.cs" />

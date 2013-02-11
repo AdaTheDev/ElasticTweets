@@ -13,19 +13,19 @@ namespace ElasticTweets.Library.UnitTests
         {
             var result = new ImportResult();
 
-            Assert.IsEmpty(result.ImportedFiles);
+            Assert.IsEmpty(result.Files);
         }
 
         [Test]        
         public void AddImportedFile_AddsFileResult()
         {
             var result = new ImportResult();
-            var file = new ImportedFile("1.txt", 123);
+            var file = new ImportFileResult("1.txt", 123);
             
             result.AddImportedFile(file);
 
-            Assert.AreEqual(1, result.ImportedFiles.Count(), "Expected 1 file in ImportedFiles" );
-            Assert.That(result.ImportedFiles.Any(f => f == file), "Expected file not found");
+            Assert.AreEqual(1, result.Files.Count(), "Expected 1 file in Files" );
+            Assert.That(result.Files.Any(f => f == file), "Expected file not found");
         }
 
         [Test]
