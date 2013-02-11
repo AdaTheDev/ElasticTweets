@@ -63,6 +63,8 @@ namespace ElasticTweets.Library
         public ImportResult Import()
         {
             var client = _clientProvider.GetClient(_elasticConnectionSettings);
+            if (!client.IsValid)            
+                throw new ElasticSearchException("Could not connect to ElasticSearch. Please check the connection settings");
             
             var results = new ImportResult();
 
