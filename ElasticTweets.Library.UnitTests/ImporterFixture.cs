@@ -56,6 +56,8 @@ namespace ElasticTweets.Library.UnitTests
             else
                 _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(mockedBulkResponse);
 
+            _mockedClient.Setup(c => c.IsValid).Returns(true);
+
             _importer = new Importer(_mockedFileSystem.Object, _mockedFileParser.Object, _mockedClientProvider.Object, _mockedConnectionSettings.Object, TestSourceDirectory);
         }
 
@@ -180,6 +182,27 @@ namespace ElasticTweets.Library.UnitTests
         #endregion
 
        #region Import Tests
+        [Test]
+        public void Import_ChecksElasticSearchConnectionIsValid()
+        {
+            InitialiseImporter();
+            _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] { "1.js" });
+
+            _importer.Import();
+
+            _mockedClient.Verify(c => c.IsValid, Times.Once());
+        }
+
+        [Test]
+        [ExpectedException(typeof(ElasticSearchException))]
+        public void Import_ThrowsWhenElasticSearchConnectionIsNotValid()
+        {
+            InitialiseImporter();
+            _mockedClient.Setup(c => c.IsValid).Returns(false);
+            
+            _importer.Import();                  
+        }   
+
        [Test]
        public void Import_RetrievesFileNamesOnceThroughFileSystem()
        {
