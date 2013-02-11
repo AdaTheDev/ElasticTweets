@@ -9,7 +9,7 @@ namespace ElasticTweets.Library.UnitTests
     public class ElasticConnectionSettingsFixture
     {
         private const string TestHost = "TestHost";
-        private const string TestIndexName = "TestIndex";
+        private const string TestIndexName = "testindex";
         private const int TestPort = 123;
         private ElasticConnectionSettings _settings;
         
@@ -17,6 +17,7 @@ namespace ElasticTweets.Library.UnitTests
         {
             _settings = new ElasticConnectionSettings(TestHost, TestPort, TestIndexName);
         }
+
         #region Constructor Tests
         [Test]
         [TestCaseSource(typeof(TestCases), "NullOrWhiteSpaceStrings")]
@@ -75,6 +76,14 @@ namespace ElasticTweets.Library.UnitTests
         public void Constructor_SetsIndexName()
         {
             InitialiseSettings();
+
+            Assert.AreEqual(TestIndexName, _settings.IndexName);
+        }
+
+        [Test]
+        public void Constructor_ForcesIndexNameToLowerCase()
+        {
+            _settings = new ElasticConnectionSettings(TestHost, TestPort, TestIndexName.ToUpper());
 
             Assert.AreEqual(TestIndexName, _settings.IndexName);
         }
