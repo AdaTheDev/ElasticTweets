@@ -16,6 +16,7 @@ namespace ElasticTweets.Library.UnitTests
     public class ImporterFixture
     {
         private const string TestSourceDirectory = @"C:\Test-Not-Real\";
+        private const string TestResponseErrorMessage = "Dummy error";
 
         private Importer _importer;
         private Mock<IFileSystem> _mockedFileSystem;
@@ -24,8 +25,8 @@ namespace ElasticTweets.Library.UnitTests
         private Mock<IElasticClient> _mockedClient;
         private Mock<ITweetDataFileParser> _mockedFileParser;
         private List<dynamic> _testTweets;
-        private Mock<IBulkResponse> _mockedClientResponse;
-
+        private Mock<IBulkResponse> _mockedClientSuccessResponse;                
+        
         [SetUp]
         public void Setup()
         {
@@ -34,11 +35,15 @@ namespace ElasticTweets.Library.UnitTests
             _mockedClientProvider = new Mock<IClientProvider>(MockBehavior.Strict);
             _mockedClient = new Mock<IElasticClient>(MockBehavior.Strict);
             _mockedFileParser = new Mock<ITweetDataFileParser>(MockBehavior.Strict);
-            _mockedClientResponse = new Mock<IBulkResponse>(MockBehavior.Strict);
+            _mockedClientSuccessResponse = new Mock<IBulkResponse>(MockBehavior.Strict);
+            _mockedClientSuccessResponse.Setup(r => r.Items)
+                                        .Returns(new BulkOperationResponseItem[] {new BulkIndexResponseItem()});
+            _mockedClientSuccessResponse.Setup(r => r.ConnectionStatus).Returns(new ConnectionStatus("Test"));
+                        
             _testTweets = new List<dynamic>();
         }
 
-        public void InitialiseImporter()
+        public void InitialiseImporter(IBulkResponse mockedBulkResponse = null)
         {
             _mockedFileSystem.Setup(fs => fs.DirectoryExists(TestSourceDirectory)).Returns(true);
             _mockedClientProvider.Setup(cp => cp.GetClient(_mockedConnectionSettings.Object))
@@ -46,10 +51,19 @@ namespace ElasticTweets.Library.UnitTests
 
             _mockedFileParser.Setup(fp => fp.GetTweets(It.IsAny<string>())).Returns(_testTweets);
 
-            _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(_mockedClientResponse.Object);
+            if (mockedBulkResponse == null)
+                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(_mockedClientSuccessResponse.Object);
+            else
+                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(mockedBulkResponse);
 
             _importer = new Importer(_mockedFileSystem.Object, _mockedFileParser.Object, _mockedClientProvider.Object, _mockedConnectionSettings.Object, TestSourceDirectory);
-        }        
+        }
+
+        private void SetupFileSystem()
+        {
+            _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] { "1.js" });
+            _mockedFileSystem.Setup(fs => fs.ReadAllText(It.IsAny<string>())).Returns("");
+        }
 
         #region Constructor Tests
         [Test]
@@ -119,7 +133,6 @@ namespace ElasticTweets.Library.UnitTests
                 throw;
             }
         }
-
 
         [Test]        
         public void Constructor_ChecksSourceDirectoryExists()
@@ -229,14 +242,31 @@ namespace ElasticTweets.Library.UnitTests
             Assert.AreEqual(1, file.NumberOfTweets, "Incorrect NumberOfTweets");
             Assert.AreEqual("1.js", file.FileName, "Incorrect FileName");
             Assert.IsTrue(file.Success, "Success should be True");
+            
+            _mockedClientSuccessResponse.Verify(r => r.ConnectionStatus, Times.Once());
+            _mockedClientSuccessResponse.Verify(r => r.Items, Times.Once());
         }
 
-        private void SetupFileSystem()
+        [Test]
+        public void Import_ReturnsCorrectImportResultWhenElasticClientReturnsError()
         {
-            _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] {"1.js"});
-            _mockedFileSystem.Setup(fs => fs.ReadAllText(It.IsAny<string>())).Returns("");
-        }
+            var failureResponse = new Mock<IBulkResponse>(MockBehavior.Strict);            
+            failureResponse.Setup(r => r.ConnectionStatus).Returns(new ConnectionStatus(new Exception(TestResponseErrorMessage)));
+            InitialiseImporter(failureResponse.Object);
+            SetupFileSystem();
+            _testTweets.Add(new { id = 1 });
 
+            var result = _importer.Import();
+
+            Assert.AreEqual(1, result.Files.Count(), "1 ImportFileResult expected");
+            var file = result.Files.First();            
+            Assert.AreEqual("1.js", file.FileName, "Incorrect FileName");
+            Assert.AreEqual(TestResponseErrorMessage, file.ErrorMessage, "Incorrect ErrorMessage");
+            Assert.IsFalse(file.Success, "Success should be False");
+
+            failureResponse.Verify(r => r.ConnectionStatus, Times.Exactly(2));            
+        }
+        
         [Test]
         public void Import_ReturnsFailureResultForFileWithInvalidJson()
         {

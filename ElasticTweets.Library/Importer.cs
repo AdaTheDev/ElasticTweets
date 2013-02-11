@@ -81,12 +81,7 @@ namespace ElasticTweets.Library
             {
                 IEnumerable<dynamic> tweets = _parser.GetTweets(file).ToArray();
 
-                if (tweets.Any())
-                {
-                    client.IndexMany(tweets);
-                }
-
-                result = new ImportFileResult(file, tweets.Count());
+                result = tweets.Any() ? BuildFileResultFromClientResponse(file, client.IndexMany(tweets)) : new ImportFileResult(file, tweets.Count());
             }
             catch (JsonReaderException jsonReaderException)
             {
@@ -96,5 +91,13 @@ namespace ElasticTweets.Library
 
             return result;
         }
-    }
+
+        private ImportFileResult BuildFileResultFromClientResponse(string file, IBulkResponse response)
+        {
+            if (response.ConnectionStatus.Success)            
+                return new ImportFileResult(file, response.Items.Count());    
+             
+            return new ImportFileResult(file, response.ConnectionStatus.Error.ExceptionMessage);            
+        }
+    }    
 }
