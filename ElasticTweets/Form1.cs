@@ -18,14 +18,7 @@ namespace ElasticTweets
         {
             InitializeComponent();
         }        
-
-        private void btnImport_Click(object sender, EventArgs e)
-        {            
-            ToggleControls(false);
-
-            Task.Factory.StartNew(DoImport).ContinueWith(_ => ToggleControls(true));                
-        }
-
+        
         private void DoImport()
         {
             string validationResult = ValidateInputs();
@@ -113,6 +106,18 @@ namespace ElasticTweets
         {
             folderDialog.ShowDialog();
             txtSourceDirectory.Text = folderDialog.SelectedPath;
+        }        
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Schhhhtop...it's not ready yet!");
+        }   
+     
+        private void btnImport_Click(object sender, EventArgs e)
+        {
+            ToggleControls(false);
+
+            Task.Factory.StartNew(DoImport).ContinueWith(_ => ToggleControls(true));
         }
     }
 }
