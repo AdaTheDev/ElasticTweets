@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ElasticTweets.Library.Data;
 using ElasticTweets.Library.IO;
 using ElasticTweets.Library.Providers;
 using Moq;
@@ -24,7 +25,7 @@ namespace ElasticTweets.Library.UnitTests
         private Mock<IClientProvider> _mockedClientProvider;
         private Mock<IElasticClient> _mockedClient;
         private Mock<ITweetDataFileParser> _mockedFileParser;
-        private List<dynamic> _testTweets;
+        private List<Tweet> _testTweets;
         private Mock<IBulkResponse> _mockedClientSuccessResponse;                
         
         [SetUp]
@@ -40,7 +41,7 @@ namespace ElasticTweets.Library.UnitTests
                                         .Returns(new BulkOperationResponseItem[] {new BulkIndexResponseItem()});
             _mockedClientSuccessResponse.Setup(r => r.ConnectionStatus).Returns(new ConnectionStatus("Test"));
                         
-            _testTweets = new List<dynamic>();
+            _testTweets = new List<Tweet>();
         }
 
         public void InitialiseImporter(IBulkResponse mockedBulkResponse = null)
@@ -52,9 +53,9 @@ namespace ElasticTweets.Library.UnitTests
             _mockedFileParser.Setup(fp => fp.GetTweets(It.IsAny<string>())).Returns(_testTweets);
 
             if (mockedBulkResponse == null)
-                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(_mockedClientSuccessResponse.Object);
+                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<Tweet>>())).Returns(_mockedClientSuccessResponse.Object);
             else
-                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>())).Returns(mockedBulkResponse);
+                _mockedClient.Setup(c => c.IndexMany(It.IsAny<IEnumerable<Tweet>>())).Returns(mockedBulkResponse);
 
             _mockedClient.Setup(c => c.IsValid).Returns(true);
 
@@ -244,11 +245,11 @@ namespace ElasticTweets.Library.UnitTests
             InitialiseImporter();
             _mockedFileSystem.Setup(fs => fs.GetFiles(TestSourceDirectory, "*.js")).Returns(new[] { "1.js" });
             _mockedFileSystem.Setup(fs => fs.ReadAllText(It.IsAny<string>())).Returns("");            
-            _testTweets.Add(new {id=1});
+            _testTweets.Add(new Tweet{id=1});
             
             _importer.Import();
 
-            _mockedClient.Verify(c => c.IndexMany(It.IsAny<IEnumerable<dynamic>>()), Times.Once());
+            _mockedClient.Verify(c => c.IndexMany(It.IsAny<IEnumerable<Tweet>>()), Times.Once());
         }
 
         [Test]
@@ -256,7 +257,7 @@ namespace ElasticTweets.Library.UnitTests
         {
             InitialiseImporter();
             SetupFileSystem();
-            _testTweets.Add(new { id = 1 });
+            _testTweets.Add(new Tweet{ id = 1 });
 
             var result = _importer.Import();
 
@@ -277,7 +278,7 @@ namespace ElasticTweets.Library.UnitTests
             failureResponse.Setup(r => r.ConnectionStatus).Returns(new ConnectionStatus(new Exception(TestResponseErrorMessage)));
             InitialiseImporter(failureResponse.Object);
             SetupFileSystem();
-            _testTweets.Add(new { id = 1 });
+            _testTweets.Add(new Tweet{ id = 1 });
 
             var result = _importer.Import();
 

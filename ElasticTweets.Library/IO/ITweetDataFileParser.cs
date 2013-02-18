@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
+using ElasticTweets.Library.Data;
 
 namespace ElasticTweets.Library.IO
 {
     public interface ITweetDataFileParser
     {
-        IEnumerable<object> GetTweets(string fileName);
+        IEnumerable<Tweet> GetTweets(string fileName);
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ElasticTweets.Library.Data;
 using Newtonsoft.Json;
 
 namespace ElasticTweets.Library.IO
@@ -29,7 +30,7 @@ namespace ElasticTweets.Library.IO
         /// </summary>
         /// <param name="fileName">.js tweet file to get tweets from</param>
         /// <returns>enumerable of dynamics</returns>
-        public IEnumerable<dynamic> GetTweets(string fileName)
+        public IEnumerable<Tweet> GetTweets(string fileName)
         {
             if (!fileName.ToLowerInvariant().EndsWith(".js"))
                 throw new ArgumentException("Expected to receive a .js file", "fileName");
@@ -40,17 +41,17 @@ namespace ElasticTweets.Library.IO
             string fileText = _fileSystem.ReadAllText(fileName);
 
             if (String.IsNullOrWhiteSpace(fileText))
-                return Enumerable.Empty<dynamic>();
+                return Enumerable.Empty<Tweet>();
 
             // Remove the first line
             int firstNewLineChar = fileText.IndexOf('\n');
             if (firstNewLineChar < 0)
-                return Enumerable.Empty<dynamic>();
+                return Enumerable.Empty<Tweet>();
             
             fileText = fileText.Remove(0, firstNewLineChar + 1);
 
             // Deserialize all the tweets in the file
-            return JsonConvert.DeserializeObject<dynamic>(fileText);            
+            return JsonConvert.DeserializeObject<Tweet[]>(fileText);            
         }
     }
 }

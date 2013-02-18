@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ElasticTweets.Library.Data;
 using ElasticTweets.Library.IO;
 using ElasticTweets.Library.Providers;
 using Nest;
@@ -81,7 +82,7 @@ namespace ElasticTweets.Library
 
             try
             {
-                IEnumerable<dynamic> tweets = _parser.GetTweets(file).ToArray();
+                Tweet[] tweets = _parser.GetTweets(file).ToArray();
 
                 result = tweets.Any() ? BuildFileResultFromClientResponse(file, client.IndexMany(tweets)) : new ImportFileResult(file, tweets.Count());
             }
