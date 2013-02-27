@@ -7,13 +7,17 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ElasticTweets.Library;
+using ElasticTweets.Library.Data;
 using ElasticTweets.Library.IO;
 using ElasticTweets.Library.Providers;
+using ElasticTweets.Library.Queries;
 
 namespace ElasticTweets
 {
     public partial class frmImport : Form
     {
+        private IElasticQuery[] _queries;
+
         public frmImport()
         {
             InitializeComponent();
@@ -29,7 +33,7 @@ namespace ElasticTweets
             }
 
             var fileSystem = new FileSystem();
-            var connectionSettings = new ElasticConnectionSettings(txtHost.Text, int.Parse(txtPort.Text), txtIndexName.Text);
+            var connectionSettings = GetElasticConnectionSettings();
 
             try
             {
@@ -64,6 +68,11 @@ namespace ElasticTweets
             }            
         }
 
+        private ElasticConnectionSettings GetElasticConnectionSettings()
+        {
+            return new ElasticConnectionSettings(txtHost.Text, int.Parse(txtPort.Text), txtIndexName.Text);
+        }
+
         private void ToggleControls(bool enabled)
         {
             if (txtSourceDirectory.InvokeRequired)
@@ -88,17 +97,22 @@ namespace ElasticTweets
 
             if (!Directory.Exists(txtSourceDirectory.Text))
                 return "The chosen data directory doesn't exist";
+            
+            return ValidateConnectionSettings();            
+        }
 
-            if (String.IsNullOrWhiteSpace(txtHost.Text))
-                return "Please specify the ElasticSearch host name";
+        private string ValidateConnectionSettings()
+        {
+            if (String.IsNullOrWhiteSpace(txtHost.Text))            
+                return "Please specify the ElasticSearch host name";                           
 
             int port;
-            if (String.IsNullOrWhiteSpace(txtPort.Text) || !int.TryParse(txtPort.Text, out port))
-                return "Please enter a valid ElasticSearch port number";
+            if (String.IsNullOrWhiteSpace(txtPort.Text) || !int.TryParse(txtPort.Text, out port))            
+                return "Please enter a valid ElasticSearch port number";                            
 
-            if (String.IsNullOrWhiteSpace(txtIndexName.Text))
+            if (String.IsNullOrWhiteSpace(txtIndexName.Text))            
                 return "Please enter the name of the index to import into";
-
+            
             return String.Empty;
         }
 
@@ -110,7 +124,55 @@ namespace ElasticTweets
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Schhhhtop...it's not ready yet!");
+            string error = ValidateConnectionSettings();
+            if (error != String.Empty)
+                MessageBox.Show(error);
+            else
+            {
+                var query = cboQueries.SelectedItem as IElasticQuery;
+                var searcher = new ElasticSearcher(new ClientProvider(), GetElasticConnectionSettings());
+                var results = searcher.Search(query, 1000).ToArray();
+                grdSearchResults.AutoGenerateColumns = false;
+                grdSearchResults.CellFormatting -= grdSearchResults_CellFormatting;
+                grdSearchResults.Columns.Clear();                
+                var column = new DataGridViewColumn(new DataGridViewTextBoxCell())
+                {
+                    Name="Date",
+                    DataPropertyName = "created_at",
+                    Width = 100                    
+                };
+                grdSearchResults.Columns.Add(column);
+                    
+                column = new DataGridViewColumn(new DataGridViewTextBoxCell())
+                    {
+                        Name="Tweet",
+                        DataPropertyName = "text", 
+                        Width = 600
+                    };
+                grdSearchResults.Columns.Add(column);
+
+                column = new DataGridViewColumn(new DataGridViewTextBoxCell())
+                    {
+                    Name = "URL",
+                    Width = 600
+                    };
+                grdSearchResults.Columns.Add(column);
+                grdSearchResults.CellFormatting += grdSearchResults_CellFormatting;
+                grdSearchResults.DataSource = results;                
+            }
+        }
+
+        void grdSearchResults_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.ColumnIndex == 0)
+            {
+                e.Value = DateTime.ParseExact(e.Value as string, "ddd MMM dd HH:mm:ss zzz yyyy", CultureInfo.CurrentUICulture, DateTimeStyles.None).ToString("dd MMM yyyy HH:mm");
+            }
+            else if (e.ColumnIndex == 2)
+            {
+                var row = grdSearchResults.Rows[e.RowIndex];
+                row.Cells[e.ColumnIndex].Value = ((Tweet) row.DataBoundItem).entities.urls.First().expanded_url;
+            }
         }   
      
         private void btnImport_Click(object sender, EventArgs e)
@@ -118,6 +180,15 @@ namespace ElasticTweets
             ToggleControls(false);
 
             Task.Factory.StartNew(DoImport).ContinueWith(_ => ToggleControls(true));
+        }
+
+        private void frmImport_Load(object sender, EventArgs e)
+        {
+            var queryDiscoverer = new QueryDiscoverer();            
+
+            cboQueries.DataSource = queryDiscoverer.FindAll();
+            cboQueries.DisplayMember = "Description";
+            cboQueries.ValueMember = "Description";
         }
     }
 }

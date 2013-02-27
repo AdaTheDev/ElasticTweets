@@ -24,15 +24,15 @@ namespace ElasticTweets.Library
             _client = _clientProvider.GetClient(_elasticConnectionSettings);
         }
 
-        public IEnumerable<Tweet> SearchRaw(IElasticQuery query)
+        public IEnumerable<Tweet> SearchRaw(IElasticQuery query, int maxDocuments)
         {
-            var response = ExecuteRaw(query.RawQueryText);
+            var response = ExecuteRaw(query.RawQueryText, maxDocuments);
             return Results(response);
         }
 
-        public IEnumerable<Tweet> SearchClientApi(IElasticQuery query)
+        public IEnumerable<Tweet> Search(IElasticQuery query, int maxDocuments)
         {
-            var response = ExecuteClient(query.Builder);
+            var response = ExecuteDsl(query.Query, maxDocuments);
             return Results(response);
         }
 
@@ -40,14 +40,17 @@ namespace ElasticTweets.Library
         {
             return response.Documents;
         }
-        private IQueryResponse<Tweet> ExecuteRaw(string query)
+
+        private IQueryResponse<Tweet> ExecuteRaw(string query, int maxDocuments)
         {
-            return _client.SearchRaw<Tweet>(query); 
+            var searchBuilder = new SearchBuilder();
+            searchBuilder.Query(query).Size(maxDocuments);
+            return _client.Search<Tweet>(searchBuilder);
         }
         
-        private IQueryResponse<Tweet> ExecuteClient(SearchBuilder searchBuilder)
+        private IQueryResponse<Tweet> ExecuteDsl(QueryDescriptor<Tweet> query, int maxDocuments)
         {            
-            return _client.Search<Tweet>(searchBuilder);   
+            return _client.Search<Tweet>(s => s.Query(query).Size(maxDocuments));               
         }
     }
 }

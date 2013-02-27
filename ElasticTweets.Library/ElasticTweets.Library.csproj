@@ -76,6 +76,7 @@
     <Compile Include="Providers\ClientProvider.cs" />
     <Compile Include="Providers\IClientProvider.cs" />
     <Compile Include="Queries\IElasticQuery.cs" />
+    <Compile Include="Queries\QueryDiscoverer.cs" />
     <Compile Include="Queries\TweetsContainingLinksQuery.cs" />
   </ItemGroup>
   <ItemGroup>

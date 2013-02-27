@@ -1,4 +1,5 @@
-﻿using Nest.FactoryDsl;
+﻿using ElasticTweets.Library.Data;
+using Nest;
 
 namespace ElasticTweets.Library.Queries
 {
@@ -6,6 +7,6 @@ namespace ElasticTweets.Library.Queries
     {
         string Description { get; }
         string RawQueryText { get; }
-        SearchBuilder Builder { get; }
+        QueryDescriptor<Tweet> Query { get; }
     }    
 }
